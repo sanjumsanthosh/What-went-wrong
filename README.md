@@ -1,133 +1,96 @@
 # What Went Wrong
 
-A Next.js application that helps users analyze and understand their failed habits or resolutions using AI-powered insights. The app provides a conversational interface that adapts to user responses and generates personalized analysis and solutions.
+**A guided post-mortem for a habit you dropped.** Answer a few questions, get an honest analysis of
+why it failed — and what to change next time.
 
-## Features
+Next.js · Groq or Azure OpenAI · Zustand + localStorage · no account, no server-side storage.
 
-- 🤖 AI-powered question generation using Groq or Azure models
-- 🔄 Dynamic conversation flow that adapts to user responses
-- 📊 Detailed analysis of habit failures and patterns
-- 💡 Personalized action steps and solutions
-- 🎨 Beautiful, responsive UI with dark mode support
-- 🔒 Secure token-based API authentication
-- 💾 Persistent storage with easy reset option
+---
 
-## Getting Started
+## Why
 
-### Prerequisites
+Habit apps track streaks. They don't ask *why you stopped*. This one runs a short interview:
+six fixed questions about the habit, the substitutes, the friction, the timing and the obstacles —
+then AI-generated follow-ups that probe what you actually said, and finally an analysis split into
+**what went wrong** and **what to do next**.
 
-- Node.js 18+ 
-- npm/yarn/pnpm
-- A Groq API key or Azure OpenAI key
+## How it works
 
-### Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/what-went-wrong.git
-cd what-went-wrong
+```
+6 fixed questions  →  AI follow-up questions  →  analysis (2 sections)
+   (lib/constants)      (adapts to answers)        what went wrong
+                                                   what to do next
 ```
 
-2. Install dependencies:
-```bash
-npm install
-```
+- **Fixed opening.** The first six questions come from `lib/constants/questions.ts`, so every session
+  covers the same ground — habit, substitute behaviour, friction, timing, obstacles, history.
+- **Adaptive middle.** `/api/generate-ai-questions` reads your answers and writes follow-ups that
+  target the specific pattern you described, rather than a generic script.
+- **Analysis at eight.** `/api/generate-analysis` returns JSON with two sections: the failure pattern
+  (environment, friction, motivation) and concrete next steps.
+- **Streaming.** Responses stream in, so long analyses don't look like a hung page.
 
-3. Create a `.env.local` file in the root directory:
+## Bring your own model
+
+The app never proxies your key through a third party; you paste a token into the UI and choose a
+provider.
+
+| Provider | Model | Notes |
+|---|---|---|
+| Groq | `llama-3.3-70b-versatile` | Fast, cheap, good enough for this prompt shape |
+| Azure OpenAI | your deployment | Set endpoint and deployment name in `.env.local` |
+
 ```env
-GROQ_API_KEY=your_groq_api_key
-# Or for Azure:
-AZURE_AI_KEY=your_azure_key
-AZURE_ENDPOINT=your_azure_endpoint
-AZURE_MODEL_NAME=your_model_name
+# .env.local
+GROQ_API_KEY=…
+# or
+AZURE_AI_KEY=…
+AZURE_ENDPOINT=…
+AZURE_MODEL_NAME=…
 ```
 
-4. Start the development server:
+Requests require an `Authorization` bearer token; the API routes reject calls without one (`401`).
+
+## Run it
+
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/sanjumsanthosh/What-went-wrong
+cd What-went-wrong
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Built with Next.js App Router, Tailwind, Framer Motion and Zustand. State persists in
+`localStorage`; **Reset** clears it completely.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project layout
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Usage
-
-1. **Model Selection**: Choose between Groq or Azure/GitHub models and enter your API token
-2. **Initial Questions**: Answer the first 6 pre-defined questions about your habit
-3. **AI Questions**: The system generates follow-up questions based on your responses
-4. **Analysis**: After 8 questions, receive a detailed analysis of:
-   - What went wrong (patterns, obstacles, environment factors)
-   - What to do next (actionable steps, suggestions, improvements)
-
-## Project Structure
-
-```
-├── app/
-│   ├── api/                 # API routes
-│   ├── layout.tsx          # Root layout
-│   └── page.tsx            # Main page
-├── components/
-│   ├── ModelSetup.tsx      # Model selection
-│   ├── ResetButton.tsx     # Storage reset
-│   └── Summary.tsx         # Analysis display
-├── lib/
-│   ├── ai-clients/         # AI model integrations
-│   ├── constants/          # Static questions
-│   └── store/              # Zustand state management
+```text
+app/
+  page.tsx                      the conversation
+  api/generate-question/        one question at a time
+  api/generate-ai-questions/    adaptive follow-ups
+  api/generate-analysis/        the two-section verdict
+components/
+  ModelSetup.tsx                provider + token
+  Summary.tsx                   analysis display
+  ResetButton.tsx               clear local state
+lib/
+  ai-clients/                   groq-client, azure-client, shared types
+  constants/questions.ts        the fixed opening set
+  store/                        Zustand store + types
 ```
 
-## Technical Details
+## Limits
 
-### State Management
-- Uses Zustand for state management
-- Persists data in localStorage
-- Supports full state reset
+- One session at a time; history lives in this browser only.
+- The analysis is only as good as the model you bring — and it is advice, not therapy.
+- No multi-user support, no sync, no server database.
 
-### AI Integration
-- Supports multiple AI models:
-  - Groq (llama-3.3-70b-versatile)
-  - Azure OpenAI (customizable)
-- Token-based authentication
-- Streaming responses
+## Credits
 
-### UI/UX
-- Built with Tailwind CSS
-- Smooth animations with Framer Motion
-- Responsive design
-- Dark mode support
-- Geist font integration
+Built for the **GitHub Copilot 1-Day Build Challenge**.
 
-## Learn More
+## Author
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-
-
-## Acknowledgments
-
-- Next.js team for the amazing framework
-- Groq and Azure for AI capabilities
-- Vercel for hosting and deployment
-- Open source community for inspiration
-- GitHub Copilot 1-Day Build Challenge for the opportunity
-
+[@sanjumsanthosh](https://github.com/sanjumsanthosh)
